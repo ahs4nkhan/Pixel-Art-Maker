@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pixel Art</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<style>
+ 
+ 
+/* Colour Tokens */
+:root{
+  --bg:#ffe3f6; --panel:#fff; --text:#2b1559; --edge:#2b1559;
+  --pink:#ff3fb4; --cyan:#00d5ff; --yellow:#ffd500; --green:#2de26b; --orange:#ff7a00;
+  --check1:#f2eaff; --check2:#ffffff;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1b0b3d; --panel:#2c1566; --text:#fff3ff; --edge:#ff3fb4;
+    --check1:#3b2380; --check2:#32196f;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1b0b3d; --panel:#2c1566; --text:#fff3ff; --edge:#ff3fb4;
+  --check1:#3b2380; --check2:#32196f;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+
+
+/* Main Page and Pixel Font */
+body{
+  margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+  font-family:'Press Start 2P',ui-monospace,'Courier New',monospace;
+  font-size:10px; line-height:1.6; padding:16px;
+  background-image:
+    linear-gradient(45deg,transparent 75%,rgba(255,63,180,.12) 75%),
+    linear-gradient(45deg,rgba(0,213,255,.12) 25%,transparent 25%);
+  background-size:32px 32px;
+}
+h1{text-align:center;font-size:clamp(20px,5vw,34px);margin:8px 0 4px;letter-spacing:2px;text-shadow:3px 3px 0 var(--edge)}
+.sub{text-align:center;margin:0 0 18px;font-size:9px}
+
+
+/* The Layout */
+.app{display:grid;grid-template-columns:150px minmax(0,1fr) 170px;gap:16px;max-width:980px;margin:0 auto;align-items:start}
+.box{background:var(--panel);border:4px solid var(--edge);box-shadow:6px 6px 0 var(--edge);padding:12px}
+.box h2{font-size:10px;margin:0 0 10px;color:var(--pink)}
+.stage{display:flex;justify-content:center}
+
+
+/* Pixelated Buttons (Personal Fav) */
+button{
+  font:inherit;font-size:9px;color:#2b1559;background:var(--yellow);
+  border:3px solid var(--edge);box-shadow:3px 3px 0 var(--edge);
+  padding:9px 6px;cursor:pointer;width:100%;margin-bottom:9px;text-align:left
+}
+button:hover{filter:brightness(1.1)}
+button:active{transform:translate(3px,3px);box-shadow:none}
+button:focus-visible,.sw:focus-visible,select:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+button.on{background:var(--pink);color:#fff}
+button.go{background:var(--green)}
+button.bad{background:var(--orange)}
+select,input[type=color]{font:inherit;font-size:9px;width:100%;border:3px solid var(--edge);background:var(--panel);color:var(--text);padding:6px;margin-bottom:9px}
+input[type=color]{height:40px;padding:2px;cursor:pointer}
+label{display:block;margin-bottom:5px}
+
+
+/* Canvas */
+canvas#board{
+  width:100%;max-width:512px;aspect-ratio:1;image-rendering:pixelated;
+  border:4px solid var(--edge);box-shadow:6px 6px 0 var(--edge);
+  touch-action:none;cursor:crosshair;background:var(--check2)
+}
+.palette{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.sw{aspect-ratio:1;border:3px solid var(--edge);cursor:pointer;padding:0;margin:0;box-shadow:none}
+.sw.on{outline:3px solid var(--text);outline-offset:1px;transform:scale(1.1)}
+.now{height:34px;border:3px solid var(--edge);margin-bottom:12px}
+#preview{width:96px;height:96px;image-rendering:pixelated;border:3px solid var(--edge);display:block;margin:0 auto;background:var(--check1)}
+
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .tools{display:grid;grid-template-columns:repeat(2,1fr);column-gap:10px}
+  .tools h2,.tools .wide{grid-column:1/-1}
+  .palette{grid-template-columns:repeat(8,1fr)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<h1 id="title">PIXEL ART</h1>
+<p class="sub">Click or drag to paint. Make something bright!</p>
+
+<main class="app">
+  <section class="box tools">
+    <h2>Tools</h2>
+    <button data-tool="pencil" class="on">Pencil</button>
+    <button data-tool="eraser">Eraser</button>
+    <button data-tool="fill">Fill</button>
+    <button data-tool="pick">Picker</button>
+    <div class="wide">
+      <label for="size">Grid</label>
+      <select id="size">
+        <option value="8">8 x 8</option>
+        <option value="16" selected>16 x 16</option>
+        <option value="32">32 x 32</option>
+      </select>
+    </div>
+    <button id="grid" class="go">Grid: on</button>
+    <button id="undo">Undo</button>
+    <button id="clear" class="bad">Clear</button>
+  </section>
+
+  <section class="stage"><canvas id="board" width="512" height="512" aria-label="Pixel drawing canvas"></canvas></section>
+
+  <section class="box">
+    <h2>Colors</h2>
+    <div class="now" id="now"></div>
+    <div class="palette" id="palette"></div>
+    <label for="custom">Custom</label>
+    <input type="color" id="custom" value="#ff3fb4">
+    <h2>Preview</h2>
+    <canvas id="preview" width="16" height="16"></canvas>
+  </section>
+</main>
+
+<script>
+const COLORS = ['#ff3fb4','#ff0055','#ff7a00','#ffd500','#a6ff00','#2de26b','#00e5b0','#00d5ff',
+                '#2f7bff','#7a3cff','#c13cff','#ffffff','#b9a8ff','#7a4a2b','#2b1559','#000000'];
+const SIZE_PX = 512;
+let size = 16;                 
+let grid = blank(size);        
+let color = COLORS[0];
+let tool = 'pencil';
+let showGrid = true;
+let history = [];
+let painting = false;
+
+const board = document.getElementById('board');
+const ctx = board.getContext('2d');
+const prev = document.getElementById('preview');
+const pctx = prev.getContext('2d');
+
+function blank(n){ return Array.from({length:n}, () => Array(n).fill(null)); }
+
+function render(){
+  const c = SIZE_PX / size;
+  const css = getComputedStyle(document.documentElement);
+  const a = css.getPropertyValue('--check1').trim() || '#f2eaff';
+  const b = css.getPropertyValue('--check2').trim() || '#fff';
+  for (let y=0; y<size; y++) for (let x=0; x<size; x++){
+    ctx.fillStyle = grid[y][x] || ((x+y)%2 ? a : b);   // checkerboard = empty
+    ctx.fillRect(x*c, y*c, c, c);
+  }
+  if (showGrid){
+    ctx.strokeStyle = 'rgba(120,80,200,.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i=0; i<=size; i++){
+      ctx.moveTo(i*c+.5, 0); ctx.lineTo(i*c+.5, SIZE_PX);
+      ctx.moveTo(0, i*c+.5); ctx.lineTo(SIZE_PX, i*c+.5);
+    }
+    ctx.stroke();
+  }
+
+  prev.width = prev.height = size;
+  pctx.clearRect(0,0,size,size);
+  for (let y=0; y<size; y++) for (let x=0; x<size; x++){
+    if (grid[y][x]){ pctx.fillStyle = grid[y][x]; pctx.fillRect(x,y,1,1); }
+  }
+}
+
+
+function cellAt(e){
+  const r = board.getBoundingClientRect();
+  const x = Math.floor((e.clientX - r.left) / r.width  * size);
+  const y = Math.floor((e.clientY - r.top)  / r.height * size);
+  return (x>=0 && y>=0 && x<size && y<size) ? {x,y} : null;
+}
+
+function floodFill(x, y, to){
+  const from = grid[y][x];
+  if (from === to) return;
+  const stack = [[x,y]];
+  while (stack.length){
+    const [cx,cy] = stack.pop();
+    if (cx<0 || cy<0 || cx>=size || cy>=size || grid[cy][cx] !== from) continue;
+    grid[cy][cx] = to;
+    stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+  }
+}
+
+function apply(cell){
+  if (!cell) return;
+  const {x,y} = cell;
+  if (tool === 'pencil') grid[y][x] = color;
+  else if (tool === 'eraser') grid[y][x] = null;
+  else if (tool === 'fill') floodFill(x, y, color);
+  else if (tool === 'pick'){ if (grid[y][x]) setColor(grid[y][x]); setTool('pencil'); }
+  render();
+}
+
+function snapshot(){
+  history.push(JSON.stringify(grid));
+  if (history.length > 50) history.shift();
+}
+
+
+board.addEventListener('pointerdown', e => {
+  board.setPointerCapture(e.pointerId);
+  painting = true;
+  if (tool !== 'pick') snapshot();
+  apply(cellAt(e));
+});
+board.addEventListener('pointermove', e => {
+  if (painting && (tool === 'pencil' || tool === 'eraser')) apply(cellAt(e));
+});
+['pointerup','pointercancel'].forEach(t => board.addEventListener(t, () => painting = false));
+
+
+function setTool(t){
+  tool = t;
+  document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+}
+function setColor(c){
+  color = c;
+  document.getElementById('now').style.background = c;
+  document.querySelectorAll('.sw').forEach(s => s.classList.toggle('on', s.dataset.c === c));
+  if (/^#[0-9a-f]{6}$/i.test(c)) document.getElementById('custom').value = c;
+}
+
+document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => setTool(b.dataset.tool));
+
+const pal = document.getElementById('palette');
+COLORS.forEach(c => {
+  const s = document.createElement('button');
+  s.className = 'sw'; s.dataset.c = c; s.style.background = c;
+  s.setAttribute('aria-label', 'Color ' + c);
+  s.onclick = () => { setColor(c); if (tool === 'eraser' || tool === 'pick') setTool('pencil'); };
+  pal.appendChild(s);
+});
+document.getElementById('custom').oninput = e => setColor(e.target.value);
+
+document.getElementById('size').onchange = e => {
+  if (!confirm('Changing the grid clears your drawing. Continue?')) { e.target.value = size; return; }
+  size = +e.target.value; grid = blank(size); history = []; render();
+};
+document.getElementById('grid').onclick = e => {
+  showGrid = !showGrid;
+  e.target.textContent = 'Grid: ' + (showGrid ? 'on' : 'off');
+  e.target.classList.toggle('go', showGrid);
+  render();
+};
+document.getElementById('undo').onclick = () => {
+  if (history.length){ grid = JSON.parse(history.pop()); render(); }
+};
+document.getElementById('clear').onclick = () => { snapshot(); grid = blank(size); render(); };
+
+
+const title = document.getElementById('title');
+const letters = title.textContent;
+title.textContent = '';
+[...letters].forEach((ch, i) => {
+  const s = document.createElement('span');
+  s.textContent = ch;
+  s.style.color = COLORS[(i * 2) % 12];
+  title.appendChild(s);
+});
+
+setColor(color);
+render();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
+</script>
+</body>
+</html>
